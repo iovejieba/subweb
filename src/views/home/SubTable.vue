@@ -1,0 +1,387 @@
+<template>
+  <div class="row g-4 custom-div">
+    <div class="col-12 col-lg-12 pt-4 pt-lg-0">
+      <div class="tab-content p-0">
+        <div class="tab-pane fade show active">
+          <div class="card mb-4">
+            <div class="card-body">
+              <div class="row mb-3 g-3">
+                <div class="col-12 col-md-12">
+                  <label class="form-label" for="add-user-email">订阅链接</label>
+                  <textarea class="form-control" v-model.trim="urls" :placeholder="placeholder" rows="3"></textarea>
+                </div>
+                <div class="col-5 col-md-6">
+                  <label class="form-label" for="client">客户端</label>
+                  <select class="form-select" id="client" v-model="target" @change="selectTarget">
+                    <option v-for="option in targetOptions" :key="option" :value="option.value">
+                      {{ option.text }}
+                    </option>
+                  </select>
+                </div>
+                <div class="col-7 col-md-6">
+                  <label class="form-label" for="api">后端服务</label>
+                  <select class="form-select" id="api" @change="selectApi">
+                    <option v-for="option in backendOptions" :key="option.name" :value="option.url">
+                      {{ option.name }}
+                    </option>
+                    <option value="manual">自定义后端 API 地址</option>
+                  </select>
+                </div>
+                <div class="col-12 col-md-12" v-if="isShowManualApiUrl">
+                  <input class="form-control" placeholder="自定义后端 API 地址示例：https://sub.ops.ci" v-model="api" />
+                </div>
+                <div class="col-8 col-md-10">
+                  <label class="form-label" for="remote">远程配置</label>
+                  <select class="form-select" id="remote" @change="selectRemoteConfig">
+                    <option v-for="option in remoteConfigOptions" :key="option" :value="option.value">
+                      {{ option.text }}
+                    </option>
+                    <option value="manual">自定义远程配置地址</option>
+                  </select>
+                </div>
+                <div class="col-4 col-md-2">
+                  <label class="form-label">&nbsp;</label>
+                  <el-button type="warning" @click="showMoreConfig" style="width: 100%">参数</el-button>
+                </div>
+                <div class="col-12 col-md-12" v-if="isShowRemoteConfig">
+                  <input class="form-control" placeholder="自定义远程配置地址：" v-model="remoteConfig" />
+                </div>
+                <div class="col-12 col-md-12" v-if="isShowMoreConfig">
+                  <label class="form-label" for="add-user-email">可选参数</label>
+                  <div class="row g-3">
+                    <div class="col-12 col-md-12">
+                      <input class="form-control" placeholder="Include: 可选" v-model="moreConfig.include" />
+                    </div>
+                    <div class="col-12 col-md-12">
+                      <input class="form-control" placeholder="Exclude: 可选" v-model="moreConfig.exclude" />
+                    </div>
+                    <div class="col-12 col-md-6">
+                      <label class="form-label" for="emoji">Emoji</label>
+                      <select class="form-select" id="emoji" v-model="moreConfig.emoji">
+                        <option value="">请选择</option>
+                        <option value="true">emoji=true</option>
+                        <option value="false">emoji=false</option>
+                      </select>
+                    </div>
+                    <div class="col-12 col-md-6">
+                      <label class="form-label" for="udp">开启UDP</label>
+                      <select class="form-select" id="udp" v-model="moreConfig.udp">
+                        <option value="">请选择</option>
+                        <option value="true">udp=true</option>
+                        <option value="false">udp=false</option>
+                      </select>
+                    </div>
+                    <div class="col-12 col-md-6">
+                      <label class="form-label" for="sort">排序节点</label>
+                      <select class="form-select" id="sort" v-model="moreConfig.sort">
+                        <option value="">请选择</option>
+                        <option value="true">sort=true</option>
+                        <option value="false">sort=false</option>
+                      </select>
+                    </div>
+                    <div class="col-12 col-md-6">
+                      <label class="form-label" for="scv">关闭证书检查</label>
+                      <select class="form-select" id="scv" v-model="moreConfig.scv">
+                        <option value="">请选择</option>
+                        <option value="true">scv=true</option>
+                        <option value="false">scv=false</option>
+                      </select>
+                    </div>
+                    <div class="col-12 col-md-6">
+                      <label class="form-label" for="nodelist">Node List</label>
+                      <select class="form-select" id="nodelist" v-model="moreConfig.list">
+                        <option value="">请选择</option>
+                        <option value="true">list=true</option>
+                        <option value="false">list=false</option>
+                      </select>
+                    </div>
+                    <div class="col-12 col-md-6">
+                      <label class="form-label" for="expand">Expand</label>
+                      <select class="form-select" id="expand" v-model="moreConfig.expand">
+                        <option value="">请选择</option>
+                        <option value="true">expand=true</option>
+                        <option value="false">expand=false</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-12 col-md-12">
+                  <div class="divider divider-dashed">
+                    <div class="divider-text"><i class="ti ti-refresh" style="color: gray"></i></div>
+                  </div>
+                </div>
+                <div class="col-12 col-md-10">
+                  <input class="form-control" placeholder="点击转换链接" v-model.trim="result.subUrl" />
+                </div>
+                <div class="col-12 col-md-2">
+                  <el-button type="success" @click="getSubUrl()" style="width: 100%">转换</el-button>
+                </div>
+                <template v-if="isShortUrlEnabled">
+                  <div class="col-12 col-md-10">
+                    <input class="form-control" placeholder="点击获取短链" v-model.trim="result.shortUrl" />
+                  </div>
+                  <div class="col-12 col-md-2">
+                    <el-button type="primary" :loading="isShortUrlLoading" @click="getShortUrl()" style="width: 100%" class="short-url-btn">短链</el-button>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import { getSubLink, regexCheck } from './index.js';
+import { request } from '@/network';
+import showNotification from '@/components/notification';
+export default {
+  name: 'SubTable',
+  setup() {
+    const DEFAULT_MORECONFIG = {
+      include: '',
+      exclude: '',
+      emoji: '',
+      udp: '',
+      sort: '',
+      scv: '',
+      list: '',
+      expand: '',
+    };
+    return {
+      DEFAULT_MORECONFIG,
+    };
+  },
+  data() {
+    return {
+      placeholder: '多订阅链接或节点请确保每行一条\n支持手动使用"|"分割多链接或节点',
+      targetOptions: [
+        { value: 'clash', text: 'Clash' },
+        { value: 'clashr', text: 'ClashR' },
+        { value: 'v2ray', text: 'V2Ray' },
+        { value: 'quan', text: 'Quantumult' },
+        { value: 'quanx', text: 'Quantumult X' },
+        { value: 'surge&ver=2', text: 'SurgeV2' },
+        { value: 'surge&ver=3', text: 'SurgeV3' },
+        { value: 'surge&ver=4', text: 'SurgeV4' },
+        { value: 'surfboard', text: 'Surfboard' },
+        { value: 'ss', text: 'SS (SIP002)' },
+        { value: 'sssub', text: 'SS Android' },
+        { value: 'ssd', text: 'SSD' },
+        { value: 'ssr', text: 'SSR' },
+        { value: 'loon', text: 'Loon' },
+        { value: 'singbox', text: 'Sing-box' },
+      ],
+      backendOptions: [],
+      api: '',
+      shortUrl: window.config.shortUrl,
+      remoteConfigOptions: window.config.remoteConfigOptions,
+      moreConfig: this.DEFAULT_MORECONFIG,
+      isShowMoreConfig: false,
+      isShowManualApiUrl: false,
+      isShowRemoteConfig: false,
+      result: {
+        subUrl: '',
+        shortUrl: '',
+      },
+      urls: [],
+      target: 'clash',
+      remoteConfig: window.config.remoteConfigOptions?.[0]?.value || '',
+      isShortUrlLoading: false,
+    };
+  },
+  computed: {
+    isShortUrlEnabled() {
+      return window.config.enableShortUrl !== false;
+    },
+  },
+  created() {
+    this.initBackendOptions();
+  },
+  methods: {
+    initBackendOptions() {
+      const { apiBackends } = window.config;
+      if (apiBackends && apiBackends.length > 0) {
+        this.backendOptions = apiBackends;
+        this.api = apiBackends[0].url;
+      }
+    },
+    showMoreConfig() {
+      this.isShowMoreConfig = !this.isShowMoreConfig;
+    },
+    selectApi(event) {
+      if (event.target.value == 'manual') {
+        this.api = '';
+        this.isShowManualApiUrl = true;
+      } else {
+        this.isShowManualApiUrl = false;
+        this.api = event.target.value;
+      }
+    },
+    selectRemoteConfig(event) {
+      if (event.target.value == 'manual') {
+        this.remoteConfig = '';
+        this.isShowRemoteConfig = true;
+      } else {
+        this.isShowRemoteConfig = false;
+        this.remoteConfig = event.target.value;
+      }
+    },
+    toCopy(url, title) {
+      if (!url) {
+        this.$showDialog('warning', '注意', '复制失败 内容为空');
+        return;
+      }
+      var copyInput = document.createElement('input');
+      copyInput.setAttribute('value', url);
+      document.body.appendChild(copyInput);
+      copyInput.select();
+      try {
+        var copyed = document.execCommand('copy');
+        if (copyed) {
+          document.body.removeChild(copyInput);
+          showNotification(title + ' 复制成功', '成功');
+        }
+      } catch {
+        this.$showDialog('warning', '注意', '复制失败，请检查浏览器兼容性');
+      }
+    },
+    getConverter() {
+      if (this.urls == '') {
+        this.$showDialog('warning', '注意', '请输入订阅链接或节点');
+        return false;
+      }
+      if (!regexCheck(this.api)) {
+        this.$showDialog('warning', '注意', '请输入自定义后端 API 地址，或选择默认后端服务。');
+        return false;
+      }
+      if (this.remoteConfig == '' && this.isShowRemoteConfig) {
+        this.$showDialog('warning', '注意', '请输入远程配置地址，或选择默认配置。');
+        return false;
+      }
+      if (this.api.endsWith('/')) {
+        this.api = this.api.slice(0, -1);
+      }
+      this.result.subUrl = getSubLink(
+        this.urls,
+        this.api,
+        this.target,
+        this.remoteConfig,
+        this.isShowMoreConfig,
+        this.moreConfig
+      );
+      return true;
+    },
+    getSubUrl() {
+      if (!this.getConverter()) {
+        return;
+      }
+      this.toCopy(this.result.subUrl, '订阅链接');
+    },
+    getShortUrl() {
+      if (!this.getConverter()) {
+        return;
+      }
+      this.isShortUrlLoading = true;
+      let data = new FormData();
+      data.append('longUrl', btoa(this.result.subUrl));
+      request({
+        method: 'post',
+        url: this.shortUrl + '/short',
+        header: {
+          'Content-Type': 'application/form-data; charset=utf-8',
+        },
+        data: data,
+      })
+        .then((res) => {
+          if (res.data.Code === 1 && res.data.ShortUrl !== '') {
+            this.result.shortUrl = res.data.ShortUrl;
+            this.toCopy(this.result.shortUrl, '短链接');
+          }
+          this.isShortUrlLoading = false;
+        })
+        .catch(() => {
+          this.$showDialog('error', '失败', '短链接生成失败 请检查短链接服务是否可用');
+          this.isShortUrlLoading = false;
+        });
+    },
+  },
+};
+</script>
+
+<style scoped>
+.custom-div {
+  width: 100%;
+  margin: 0 auto;
+}
+@media (min-width: 767.98px) {
+  .custom-div {
+    width: 90%;
+    margin: 0 auto;
+  }
+}
+@media (min-width: 991.98px) {
+  .custom-div {
+    width: 80%;
+    margin: 0 auto;
+  }
+}
+@media (min-width: 1199.98px) {
+  .custom-div {
+    width: 70%;
+    margin: 0 auto;
+  }
+}
+
+.btn {
+  width: 100%;
+}
+
+.divider {
+  margin: 1%;
+}
+</style>
+
+<style>
+.dark-style .card {
+  background-color: #2f3349;
+  color: #cfd3ec;
+  border: none;
+}
+
+.dark-style .form-label,
+.dark-style .form-check-label {
+  color: #cfd3ec;
+}
+
+.dark-style .form-control,
+.dark-style .form-select {
+  background-color: #25293c;
+  border-color: #434968;
+  color: #cfd3ec;
+}
+
+.dark-style .form-control:focus,
+.dark-style .form-select:focus {
+  background-color: #25293c;
+  border-color: #7367f0;
+  color: #cfd3ec;
+}
+
+.dark-style .form-control::placeholder {
+  color: #5c617a;
+}
+
+.short-url-btn {
+  position: relative;
+}
+.short-url-btn :deep(.el-icon.is-loading) {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-right: 0 !important;
+}
+</style>
